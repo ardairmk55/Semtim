@@ -55,7 +55,8 @@ test("tekilleştirme aynı ad+telefonu bir kez tutar", () => {
 test("büyük alan parçalara bölünür", () => {
   assert.equal(S.veri.bolgeler(41, 29, 2000).length, 1);
   assert.equal(S.veri.bolgeler(41, 29, 6000).length, 4);
-  assert.equal(S.veri.bolgeler(41, 29, 10000).length, 9);
+  assert.equal(S.veri.bolgeler(41, 29, 10000).length, 9); // fonksiyon genel; uygulama 5 km ile sınırlar
+  assert.equal(S.veri.EN_FAZLA_YARICAP, 5000);
   assert.match(S.veri.sorguMetni("(around:100,41,29)"), /^\[out:json\]/);
 });
 
@@ -88,4 +89,40 @@ test("Overpass: kullanıcı iptali AbortError olarak yükselir", async () => {
   const p = V.veri.overpass("[out:json];", k.signal);
   setTimeout(() => k.abort(), 20);
   await assert.rejects(p, (e) => e.name === "AbortError");
+});
+
+test("Overpass: yanıt vermeyen sunucu beklenmeden ikinciyle yarıştırılır, hızlı olan kazanır", async () => {
+  const istekler = [];
+  const fetch = (url, { signal }) => {
+    istekler.push(new URL(url).host);
+    if (url.includes("overpass-api.de")) {
+      return new Promise((_, red) => signal.addEventListener("abort", () => red(new DOMException("x", "AbortError"))));
+    }
+    return Promise.resolve({ ok: true, status: 200, json: async () => ({ elements: [{ id: 2 }] }) });
+  };
+  const V = yukleOrtamla({ fetch }, "turkce.js", "sektor.js", "veri.js");
+  V.veri.AYAR.kademe = [0, 30, 60, 90];
+  const t0 = Date.now();
+  const d = await V.veri.overpass("[out:json];");
+  assert.equal(d.elements[0].id, 2);
+  assert.ok(Date.now() - t0 < 1000, "ilk sunucunun 45 sn'lik süresini beklemedi");
+  assert.deepEqual(j(istekler), ["overpass-api.de", "overpass.kumi.systems"]);
+});
+
+test("Overpass: 200 dönüp sorguyu yarıda kesen sunucu hata sayılır", async () => {
+  const fetch = async (url) => url.includes("overpass-api.de")
+    ? { ok: true, status: 200, json: async () => ({ remark: "runtime error: Query timed out in \"query\"", elements: [] }) }
+    : { ok: true, status: 200, json: async () => ({ elements: [{ id: 3 }] }) };
+  const V = yukleOrtamla({ fetch }, "turkce.js", "sektor.js", "veri.js");
+  const d = await V.veri.overpass("[out:json];");
+  assert.equal(d.elements[0].id, 3);
+});
+
+test("Overpass sorgusu kutu (bbox), düşük süre ve qt kullanır", () => {
+  const [kapsam] = S.veri.bolgeler(41, 29, 1000);
+  assert.match(kapsam, /^\(40\.99\d+,28\.98\d+,41\.00\d+,29\.01\d+\)$/);
+  const q = S.veri.sorguMetni(kapsam);
+  assert.match(q, /\[timeout:30\]\[maxsize:67108864\]/);
+  assert.match(q, /out center tags qt;$/);
+  assert.doesNotMatch(q, /around/);
 });

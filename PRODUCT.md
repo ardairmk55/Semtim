@@ -16,7 +16,7 @@ Birincil kullanıcı: dijital ajans, web tasarımcısı, freelancer ya da sahada
 
 ## Product Purpose
 
-Seçilen noktanın 10 km çevresindeki işletmeleri OpenStreetMap'ten anlık çekip haritada gösterir; kayıtlı web sitesi olmayanları fırsat puanıyla sıralar ve kullanıcının bu adayları bir satış hunisinde takip etmesini sağlar. Başarı: kullanıcı bir semtte dakikalar içinde öncelikli bir arama/ziyaret listesi çıkarır ve sonuçlarını kaybetmeden takip eder.
+Seçilen noktanın 5 km çevresindeki işletmeleri OpenStreetMap'ten anlık çekip haritada gösterir; kayıtlı web sitesi olmayanları fırsat puanıyla sıralar ve kullanıcının bu adayları bir satış hunisinde takip etmesini sağlar. Başarı: kullanıcı bir semtte dakikalar içinde öncelikli bir arama/ziyaret listesi çıkarır ve sonuçlarını kaybetmeden takip eder.
 
 ## Positioning
 

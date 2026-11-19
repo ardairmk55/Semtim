@@ -6,7 +6,7 @@
 
 **Yakınındaki işletmeleri keşfet. Sitesi olmayanları bul, müşteriye çevir.**
 
-Seçtiğin noktanın 10 km çevresindeki işletmeleri OpenStreetMap'ten anlık çeker, kayıtlı web sitesi olmayanları puanlar
+Seçtiğin noktanın 5 km çevresindeki işletmeleri OpenStreetMap'ten anlık çeker, kayıtlı web sitesi olmayanları puanlar
 ve adaylarını aşama aşama takip etmeni sağlar. Sunucu yok, üyelik yok, ücret yok.
 
 [![CI](https://github.com/ardairmk55/Semtim/actions/workflows/ci.yml/badge.svg)](https://github.com/ardairmk55/Semtim/actions/workflows/ci.yml)
@@ -29,7 +29,7 @@ ve adaylarını aşama aşama takip etmeni sağlar. Sunucu yok, üyelik yok, üc
 
 Web tasarımcısı, ajans ya da sahada çalışan bir satışçıysan, bir semtte **sitesi olmayan işletmeleri** bulmak saatler alır. Semtim bunu dakikalara indirir:
 
-1. **Tara.** Bir semt ara, konumunu kullan ya da haritaya tıkla. 0,5–10 km yarıçaptaki tüm işletmeler gelir.
+1. **Tara.** Bir semt ara, konumunu kullan ya da haritaya tıkla. 0,5–5 km yarıçaptaki tüm işletmeler gelir.
 2. **Önceliklendir.** Fırsatlar sekmesi, kayıtlı sitesi olmayan bağımsız işletmeleri 0–100 puanla sıralar.
 3. **Ulaş.** Tek dokunuşla ara, WhatsApp'tan yaz ya da yol tarifi al.
 4. **Takip et.** Adayı huniye ekle; not, takip tarihi ve aşamayla müşteriye dönüşene kadar izle.
@@ -173,8 +173,8 @@ flowchart LR
 |---|---|
 | Bağımlılıklar | Leaflet, markercluster ve yazı tipi `vendor/` ve `fonts/` altında. Sayfa hiçbir CDN'e bağlı değil. |
 | Güvenlik | Content-Security-Policy yalnızca kendi dosyalarına ve OSM servislerine izin verir. OSM'den gelen her metin kaçışlı basılır, yalnızca http(s) bağlantılarına izin verilir, CSV formül enjeksiyonuna karşı korunur, içe aktarılan dosyalar alan alan doğrulanır. |
-| İşletme verisi | Overpass API. Her sunucuya süre sınırı tanınır; yanıt yoksa ya da hata verirse sıradaki yedeğe geçilir ve son çalışan sunucu bir sonraki sorguda önce denenir. |
-| Büyük alanlar | 4 km'den büyük taramalar 4 ya da 9 parçaya bölünür; zaman aşımını önler, ilerleme gösterir. |
+| İşletme verisi | Overpass API, 4 gönüllü sunucu. Sunucular **yarıştırılır**: biri 4 sn içinde yanıt vermezse ikincisi de başlar, ilk yanıt kazanır, diğerleri iptal edilir. Hangi sunucunun hızlı olduğu ve hangisinin çöktüğü cihazda hatırlanır. Sorgu kutu (bbox) alanla ve düşük bildirilen süreyle gönderilir; yoğun sunucular onu daha önce işler. |
+| Büyük alanlar | Yarıçap en fazla 5 km. 4 km'den büyük taramalar 4 parçaya bölünür; zaman aşımını önler, ilerleme gösterir. |
 | Önbellek | Sonuçlar 7 gün IndexedDB'de. Aynı noktadaki büyük tarama küçük yarıçaplar için yeniden kullanılır; sunucular çökükse eski önbellek uyarıyla gösterilir. |
 | Çevrimdışı | Service worker uygulama kabuğunu ve son 600 harita karosunu saklar. |
 | Adres arama | Nominatim: saniyede en fazla 1 istek, otomatik tamamlama yok, sonuçlar 30 gün önbellekte. |

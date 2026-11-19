@@ -3,7 +3,7 @@
    Yeni sürüm yayınlarken SURUM'ü artırın: eski kabuk önbelleği silinir. */
 "use strict";
 
-const SURUM = "2.3.1";
+const SURUM = "2.4.0";
 const KABUK = `semtim-kabuk-${SURUM}`;
 const KARO = "semtim-karo-v1";
 const EN_FAZLA_KARO = 600;

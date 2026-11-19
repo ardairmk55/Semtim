@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Semtim — Yakınındaki işletmeleri keşfet</title>
-  <meta name="description" content="Seçtiğin noktanın 10 km çevresindeki işletmeleri haritada keşfet, kayıtlı web sitesi olmayanları fırsat listesine al ve satış hunisinde takip et. Ücretsiz, üyeliksiz.">
+  <meta name="description" content="Seçtiğin noktanın 5 km çevresindeki işletmeleri haritada keşfet, kayıtlı web sitesi olmayanları fırsat listesine al ve satış hunisinde takip et. Ücretsiz, üyeliksiz.">
   <!-- Her şey göreli yoldan ve bu klasörden yüklenir: CDN yok, build yok. Hangi sunucuya/alt klasöre konursa orada çalışır. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self' https://overpass-api.de https://overpass.kumi.systems https://overpass.private.coffee https://nominatim.openstreetmap.org https://tile.openstreetmap.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self' https://overpass-api.de https://overpass.kumi.systems https://overpass.private.coffee https://maps.mail.ru https://nominatim.openstreetmap.org https://tile.openstreetmap.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0B1828" media="(prefers-color-scheme: dark)">
@@ -88,10 +88,10 @@
         <div class="yaricap">
           <div class="yaricap-ust">
             <label for="yaricap" class="etiket">Tarama yarıçapı</label>
-            <output id="yaricapYazi" for="yaricap">2<small>km</small></output>
+            <output id="yaricapYazi" for="yaricap">1<small>km</small></output>
           </div>
-          <input id="yaricap" type="range" min="0.5" max="10" step="0.5" value="2">
-          <div class="cetvel" aria-hidden="true"><span>0,5</span><span>2,5</span><span>5</span><span>7,5</span><span>10 km</span></div>
+          <input id="yaricap" type="range" min="0.5" max="5" step="0.5" value="1">
+          <div class="cetvel" aria-hidden="true"><span>0,5</span><span>2</span><span>3,5</span><span>5 km</span></div>
         </div>
 
         <div id="merkezBilgi" class="merkez">
@@ -223,7 +223,7 @@
         <h2 id="hakkindaBaslik">Semtim</h2>
         <p>Yakınındaki işletmeleri keşfet. Sitesi olmayanları bul, müşteriye çevir.</p>
       </div>
-      <span class="hk-surum">Sürüm 2.3</span>
+      <span class="hk-surum">Sürüm 2.4</span>
       <button class="hk-kapat" data-kapat aria-label="Kapat" title="Kapat (Esc)"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button>
     </header>
 
@@ -232,7 +232,7 @@
         <li style="--c:#1E88E5">
           <span class="hk-adim"><svg class="i" aria-hidden="true"><use href="#i-radar"></use></svg></span>
           <b>Keşfet</b>
-          <p>Seçtiğin noktanın 10 km çevresindeki işletmeleri OpenStreetMap'ten anlık çeker.</p>
+          <p>Seçtiğin noktanın 5 km çevresindeki işletmeleri OpenStreetMap'ten anlık çeker.</p>
         </li>
         <li style="--c:#F57C00">
           <span class="hk-adim"><svg class="i" aria-hidden="true"><use href="#i-target"></use></svg></span>
@@ -308,7 +308,7 @@
         <p>Harita ve işletme verisi için tarayıcın doğrudan şu hizmetlere bağlanır. Bu bağlantılarda IP adresin, tarayıcı bilgisi ve aradığın adres ya da bölge ilgili hizmete iletilir; o hizmetin kendi gizlilik politikası geçerlidir:</p>
         <ul>
           <li>OpenStreetMap Vakfı: harita karoları ve adres arama (Nominatim). <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener">Gizlilik politikası</a></li>
-          <li>Overpass API sunucuları: işletme sorguları (overpass-api.de, overpass.kumi.systems, overpass.private.coffee).</li>
+          <li>Overpass API sunucuları: işletme sorguları (overpass-api.de, overpass.kumi.systems, maps.mail.ru, overpass.private.coffee).</li>
           <li>Barındırma hizmeti: sayfanın yayınlandığı sunucu, her web sitesinde olduğu gibi standart erişim kayıtları (IP adresi, zaman) tutabilir.</li>
         </ul>
 

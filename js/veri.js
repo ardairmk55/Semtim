@@ -7,10 +7,12 @@ window.Semtim = window.Semtim || {};
 
   const SURUM = "v1";
   const ONBELLEK_GUN = 7;
-  const EN_FAZLA_YARICAP = 10000;
+  const EN_FAZLA_YARICAP = 5000; // 5 km: genel Overpass sunucularını yormadan makul sürede yanıt alınan üst sınır
+  // Ücretsiz, gönüllü Overpass sunucuları. Yoğunlukta biri dolarken diğeri boş olabilir; hepsi yarıştırılır.
   const OVERPASS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
   ];
   const NOMINATIM = "https://nominatim.openstreetmap.org/search";
@@ -121,55 +123,112 @@ window.Semtim = window.Semtim || {};
     return sonuc;
   }
 
-  // Son başarılı yanıt veren sunucu bir sonraki sorguda ilk denenir.
-  let iyiSunucu = 0;
-  // Bir sunucuya tanınan süre: ilk turda kısa (hızla yedeğe geç), ikinci turda uzun (yoğunlukta sabret).
-  const SURE_SINIRI = [40000, 90000];
+  /* Overpass sunucu yarışı.
+     Sunucular sırayla değil kademeli başlatılır (0 sn, 4 sn, 9 sn, 14 sn): ilk başarılı yanıt kazanır,
+     diğer istekler iptal edilir. Hata veren sunucu beklemeden bir sonrakine yer açar.
+     Hangi sunucunun ne kadar hızlı yanıt verdiği ve hangisinin çöktüğü cihazda hatırlanır;
+     son 5 dakikada hata veren sunucu sona alınır. Böylece telefonda ikinci tarama daha da hızlanır. */
+  const AYAR = { kademe: [0, 4000, 9000, 14000], sunucuSuresi: 45000, ceza: 5 * 60000 };
+  const SAGLIK_ANAHTAR = "semtim:overpass-saglik";
+  let saglik = {};
+  try { saglik = JSON.parse(localStorage.getItem(SAGLIK_ANAHTAR) || "{}") || {}; } catch (e) { saglik = {}; }
 
-  /** Overpass'e sorar; hata, yoğunluk ya da süre aşımında sıradaki sunucuya geçer, sonra bir tur daha dener. */
-  async function overpass(sorgu, sinyal) {
-    let son;
-    const sira = OVERPASS.map((_, i) => (i + iyiSunucu) % OVERPASS.length);
-    for (let tur = 0; tur < 2; tur++) {
-      for (const i of sira) {
-        const u = OVERPASS[i];
-        const kontrol = new AbortController();
-        const iptal = () => kontrol.abort();
-        sinyal?.addEventListener("abort", iptal, { once: true });
-        const zaman = setTimeout(() => kontrol.abort(), SURE_SINIRI[tur]);
-        try {
-          const y = await fetch(u, {
-            method: "POST",
-            body: "data=" + encodeURIComponent(sorgu),
-            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-            signal: kontrol.signal,
-          });
-          if (y.ok) {
-            const veri = await y.json();
-            iyiSunucu = i;
-            return veri;
-          }
-          son = new Error(`${new URL(u).host} ${y.status}`);
-        } catch (e) {
-          if (sinyal?.aborted) throw new DOMException("İptal", "AbortError"); // kullanıcı iptal etti
-          son = e.name === "AbortError" ? new Error(`${new URL(u).host} yanıt vermedi`) : e;
-        } finally {
-          clearTimeout(zaman);
-          sinyal?.removeEventListener("abort", iptal);
-        }
+  function saglikYaz(host, alanlar) {
+    saglik[host] = { ...(saglik[host] || {}), ...alanlar };
+    try { localStorage.setItem(SAGLIK_ANAHTAR, JSON.stringify(saglik)); } catch (e) { /* depolama kapalı */ }
+  }
+
+  /** Hızlı ve sağlıklı sunucu önce; yakın zamanda çöken sona. */
+  function sunucuSirasi(simdi = Date.now()) {
+    const puan = (u, i) => {
+      const s = saglik[new URL(u).host] || {};
+      const cezali = s.hata && simdi - s.hata < AYAR.ceza && !(s.basari > s.hata);
+      return (cezali ? 1e7 : 0) + (s.basari ? s.sure : 30000) + i;
+    };
+    return OVERPASS.map((u, i) => [u, puan(u, i)]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+  }
+
+  function yaris(sira, sorgu, sinyal, bildir) {
+    return new Promise((coz, red) => {
+      const kontroller = [], zamanlar = [];
+      let bitti = false, baslayan = 0, biten = 0, sonHata = null;
+      const iptal = () => bitir(new DOMException("İptal", "AbortError"));
+      function bitir(hata, veri) {
+        if (bitti) return;
+        bitti = true;
+        zamanlar.forEach(clearTimeout);
+        kontroller.forEach((k) => k.abort());
+        sinyal?.removeEventListener("abort", iptal);
+        if (hata) red(hata); else coz(veri);
       }
-      await bekle(3000 * (tur + 1), sinyal);
-    }
-    throw new Error(`Harita veri sunucularına ulaşılamadı (${son?.message || "bilinmeyen hata"}). Biraz sonra tekrar deneyin ya da yarıçapı küçültün.`);
+      function sonraki() {
+        if (bitti || baslayan >= sira.length) return;
+        const u = sira[baslayan++], host = new URL(u).host, k = new AbortController(), t0 = Date.now();
+        kontroller.push(k);
+        zamanlar.push(setTimeout(() => k.abort(), AYAR.sunucuSuresi));
+        bildir?.({ sunucu: host, deneme: baslayan, toplam: sira.length });
+        fetch(u, {
+          method: "POST",
+          body: "data=" + encodeURIComponent(sorgu),
+          headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+          signal: k.signal,
+        })
+          .then(async (y) => {
+            if (!y.ok) throw new Error(`${host} ${y.status === 429 || y.status >= 500 ? "yoğun" : y.status}`);
+            const veri = await y.json();
+            // 200 dönüp sorguyu yarıda kesen sunucu eksik veri verir; onu da hata say.
+            if (veri && /runtime error|timed out|out of memory/i.test(veri.remark || "")) throw new Error(`${host} sorguyu tamamlayamadı`);
+            saglikYaz(host, { basari: Date.now(), sure: Date.now() - t0 });
+            bitir(null, veri);
+          })
+          .catch((e) => {
+            if (bitti) return;
+            sonHata = e.name === "AbortError" ? new Error(`${host} yanıt vermedi`) : e;
+            saglikYaz(host, { hata: Date.now() });
+            biten++;
+            if (baslayan < sira.length) sonraki(); // beklemeden sıradakini başlat
+            else if (biten === sira.length) bitir(sonHata);
+          });
+      }
+      if (sinyal?.aborted) return iptal();
+      sinyal?.addEventListener("abort", iptal, { once: true });
+      sonraki();
+      AYAR.kademe.slice(1).forEach((ms) => zamanlar.push(setTimeout(sonraki, ms)));
+    });
   }
 
-  function sorguMetni(kapsam) {
-    return "[out:json][timeout:90];(" + S.sektor.FILTRE.map((f) => f + kapsam + ";").join("") + ");out center tags;";
+  /** Overpass'e sorar. bildir({ sunucu, deneme, toplam } | { bekliyor }) ilerlemeyi arayüze aktarır. */
+  async function overpass(sorgu, sinyal, bildir) {
+    let sonHata;
+    for (let tur = 0; tur < 2; tur++) {
+      try {
+        return await yaris(sunucuSirasi(), sorgu, sinyal, bildir);
+      } catch (e) {
+        if (e.name === "AbortError" || sinyal?.aborted) throw new DOMException("İptal", "AbortError");
+        sonHata = e;
+      }
+      if (tur === 0) {
+        bildir?.({ bekliyor: true });
+        await bekle(2500, sinyal);
+      }
+    }
+    throw new Error(`Harita veri sunucuları şu an çok yoğun (${sonHata?.message || "yanıt yok"}). Birkaç dakika sonra tekrar deneyin ya da yarıçapı küçültün.`);
   }
+
+  /* Sorgu: alan kutu (bbox) olarak verilir; "around" çemberinden çok daha ucuzdur, mesafe süzmesi tarayıcıda yapılır.
+     Bildirilen düşük süre ve bellek, yoğun sunucuların sorguyu kuyruğa daha önce almasını sağlar. */
+  function sorguMetni(kapsam) {
+    return "[out:json][timeout:30][maxsize:67108864];(" + S.sektor.FILTRE.map((f) => f + kapsam + ";").join("") + ");out center tags qt;";
+  }
+
+  const kutu = (s, w, n, e) => `(${s.toFixed(6)},${w.toFixed(6)},${n.toFixed(6)},${e.toFixed(6)})`;
 
   /** Büyük alanları parçalara böler: Overpass'te zaman aşımını önler ve ilerleme gösterir. */
   function bolgeler(lat, lng, r) {
-    if (r <= 4000) return [`(around:${r},${lat.toFixed(6)},${lng.toFixed(6)})`];
+    if (r <= 4000) {
+      const dLat = r / 111320, dLng = r / (111320 * Math.cos((lat * Math.PI) / 180));
+      return [kutu(lat - dLat, lng - dLng, lat + dLat, lng + dLng)];
+    }
     const n = r <= 7000 ? 2 : 3;
     const dLat = r / 111320, dLng = r / (111320 * Math.cos((lat * Math.PI) / 180));
     const g = 6;
@@ -272,7 +331,7 @@ window.Semtim = window.Semtim || {};
    * ilerleme(i, n): parça parça taramada çağrılır.
    * Dönüş: { kayitlar, zaman, onbellekten }
    */
-  async function tara(lat, lng, r, { ilerleme, sinyal, yenile = false } = {}) {
+  async function tara(lat, lng, r, { ilerleme, sinyal, yenile = false, bilgi } = {}) {
     r = Math.max(200, Math.min(EN_FAZLA_YARICAP, Math.round(r)));
     const anahtarYap = (yr) => `${SURUM}:${lat.toFixed(3)},${lng.toFixed(3)},${yr}`;
     const anahtar = anahtarYap(r);
@@ -295,7 +354,7 @@ window.Semtim = window.Semtim || {};
     try {
       for (let i = 0; i < parcalar.length; i++) {
         ilerleme?.(i, parcalar.length);
-        const d = await overpass(sorguMetni(parcalar[i]), sinyal);
+        const d = await overpass(sorguMetni(parcalar[i]), sinyal, bilgi);
         ham = ham.concat((d.elements || []).map(kayit));
         if (i < parcalar.length - 1) await bekle(400, sinyal); // sunucuya nefes aldır
       }
@@ -312,5 +371,5 @@ window.Semtim = window.Semtim || {};
     return { ...sonuc, onbellekten: false };
   }
 
-  S.veri = { tara, overpass, konumAra, onbellekTemizle, onbellekSayisi, firsatPuani, dijitalDurum, kayit, tekillestir, bolgeler, sorguMetni, EN_FAZLA_YARICAP };
+  S.veri = { tara, overpass, sunucuSirasi, AYAR, konumAra, onbellekTemizle, onbellekSayisi, firsatPuani, dijitalDurum, kayit, tekillestir, bolgeler, sorguMetni, EN_FAZLA_YARICAP };
 })(window.Semtim);

@@ -33,7 +33,7 @@
 
   const D = {
     merkez: null,        // { lat, lng, ad }
-    r: 2000,             // metre
+    r: 1000,             // metre
     taranan: null,       // son taramanın { lat, lng, r }
     kayitlar: [],
     filtreli: [],
@@ -360,12 +360,24 @@
     $("btnIptal").classList.remove("gizli");
     const { lat, lng } = D.merkez;
     const r = D.r;
-    durum("yukleniyor", `${(r / 1000).toLocaleString("tr-TR")} km çevredeki işletmeler taranıyor…`);
     ilerleme(0.04);
     if (!D.kayitlar.length) {
       $("bosDurum").classList.add("gizli");
       $("liste").innerHTML = `<li class="iskelet" aria-hidden="true">${"<div></div>".repeat(6)}</li>`;
     }
+
+    // Canlı durum: bölge, geçen süre ve şu an denenen sunucu. Sunucular yoğunken kullanıcı neyin beklendiğini görür.
+    const t0 = Date.now();
+    const canli = { bolge: "", sunucu: "", not: "" };
+    const yaz = () => {
+      if (D.kontrol !== k) return;
+      const sn = Math.round((Date.now() - t0) / 1000);
+      durum("yukleniyor",
+        `${(r / 1000).toLocaleString("tr-TR")} km çevre taranıyor${canli.bolge} · <b class="num">${sn} sn</b>` +
+        (canli.sunucu || canli.not ? `<small>${canli.not || `Sunucu: ${h(canli.sunucu)}`}</small>` : ""));
+    };
+    yaz();
+    const saat = setInterval(yaz, 1000);
 
     try {
       const s = await S.veri.tara(lat, lng, r, {
@@ -373,7 +385,16 @@
         yenile,
         ilerleme: (i, n) => {
           ilerleme(Math.max(0.04, i / n));
-          if (n > 1 && i < n) durum("yukleniyor", `Taranıyor: <b class="num">${i + 1}/${n}</b> bölge…`);
+          canli.bolge = n > 1 && i < n ? ` (bölge ${i + 1}/${n})` : "";
+          yaz();
+        },
+        bilgi: (b) => {
+          if (b.bekliyor) canli.not = "Sunucular çok yoğun, birkaç saniye içinde yeniden deneniyor…";
+          else {
+            canli.sunucu = b.sunucu;
+            canli.not = b.deneme > 1 ? `Sunucular yoğun; ${b.deneme}/${b.toplam} sunucu aynı anda deneniyor (${h(b.sunucu)})` : "";
+          }
+          yaz();
         },
       });
       D.kayitlar = s.kayitlar.map((x) => ({ ...x, mesafe: S.tr.mesafe(lat, lng, x.lat, x.lng) }));
@@ -395,6 +416,7 @@
       if (e.name === "AbortError") durum("uyari", "Tarama iptal edildi.");
       else durum("hata", h(e.message));
     } finally {
+      clearInterval(saat);
       if (D.kontrol === k) {
         D.kontrol = null;
         ilerleme(null);
@@ -996,7 +1018,7 @@
   function hashOku() {
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(\d+(?:\.\d+)?))?/);
     if (!m) return;
-    const km = Math.min(10, Math.max(0.5, +(m[3] || 2)));
+    const km = Math.min(5, Math.max(0.5, +(m[3] || 1)));
     $("yaricap").value = km;
     yaricapGuncelle();
     merkezSec(+m[1], +m[2], "Paylaşılan konum", true);

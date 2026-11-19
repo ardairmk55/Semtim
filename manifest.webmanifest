@@ -1,7 +1,7 @@
 {
   "name": "Semtim — Yakınındaki işletmeleri keşfet",
   "short_name": "Semtim",
-  "description": "Seçtiğin noktanın 10 km çevresindeki işletmeleri haritada keşfet, sitesi olmayanları fırsat listesine al, satış hunisinde takip et.",
+  "description": "Seçtiğin noktanın 5 km çevresindeki işletmeleri haritada keşfet, sitesi olmayanları fırsat listesine al, satış hunisinde takip et.",
   "lang": "tr",
   "dir": "ltr",
   "start_url": "./",
