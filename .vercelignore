@@ -1,0 +1,12 @@
+# Vercel'e yalnızca sitenin kendisi gider; geliştirme dosyaları yayınlanmaz.
+# package.json da dışarıda: Vercel projeyi build gerektirmeyen statik site olarak sunar.
+tests/
+araclar/
+.github/
+.claude/
+.impeccable/
+.ruff_cache/
+node_modules/
+package.json
+PRODUCT.md
+README.md

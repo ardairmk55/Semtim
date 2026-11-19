@@ -1,0 +1,14 @@
+{
+  "name": "semtim",
+  "version": "2.3.0",
+  "private": true,
+  "description": "Yakınındaki işletmeleri keşfet. Derlemesiz statik web uygulaması (OpenStreetMap).",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "kontrol": "node araclar/yayin-kontrol.mjs",
+    "sunucu": "python -m http.server 8000"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,27 @@
+# Her push ve pull request'te testler ile yayın kontrolü çalışır.
+# Yayın Vercel'dedir: GitHub deposu Vercel'e bağlanınca main'e gelen her push otomatik yayınlanır.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Birim testleri
+        run: npm test
+      - name: Yayın kontrolü (eksik dosya, mutlak yol, CDN, emoji)
+        run: npm run kontrol
+      - name: Python aracı sözdizimi
+        run: python3 -m py_compile araclar/semtim_kontrol.py

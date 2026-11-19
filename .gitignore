@@ -1,0 +1,17 @@
+node_modules/
+.vercel/
+.ruff_cache/
+__pycache__/
+*.pyc
+
+# Yerel araç ayarları
+.claude/
+.impeccable/
+
+# Semtim'den indirilen ve kontrol aracının ürettiği listeler (işletme iletişim bilgisi içerir)
+semtim-*.csv
+*-kontrol.csv
+semtim-huni-*.json
+
+.DS_Store
+Thumbs.db

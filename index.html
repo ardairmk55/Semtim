@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Semtim — Yakınındaki işletmeleri keşfet</title>
+  <meta name="description" content="Seçtiğin noktanın 10 km çevresindeki işletmeleri haritada keşfet, kayıtlı web sitesi olmayanları fırsat listesine al ve satış hunisinde takip et. Ücretsiz, üyeliksiz.">
+  <!-- Her şey göreli yoldan ve bu klasörden yüklenir: CDN yok, build yok. Hangi sunucuya/alt klasöre konursa orada çalışır. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self' https://overpass-api.de https://overpass.kumi.systems https://overpass.private.coffee https://nominatim.openstreetmap.org https://tile.openstreetmap.org; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B1828" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="preload" href="fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="js/tema-erken.js"></script>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="css/semtim.css">
+</head>
+<body>
+
+  <header class="ust">
+    <a class="marka" href="./" aria-label="Semtim ana sayfa">
+      <img src="img/semtim-ikon.png" alt="" width="30" height="34">
+      <span><b>Semtim</b><small>Yakınındaki işletmeleri keşfet.</small></span>
+    </a>
+
+    <nav class="gorunumler" role="tablist" aria-label="Görünüm">
+      <button class="gorunum" role="tab" id="sekmeKesif" data-mod="kesif" aria-selected="true" title="Keşfet (1)">
+        <svg class="i k" aria-hidden="true"><use href="#i-radar"></use></svg><span class="yazi">Keşfet</span>
+      </button>
+      <button class="gorunum" role="tab" id="sekmeFirsat" data-mod="firsat" aria-selected="false" title="Fırsatlar (2)">
+        <svg class="i k" aria-hidden="true"><use href="#i-target"></use></svg><span class="yazi">Fırsatlar</span>
+        <span id="firsatSayi" class="rozet-sayi firsat gizli">0</span>
+      </button>
+      <button class="gorunum" role="tab" id="sekmeHuni" data-mod="huni" aria-selected="false" title="Satış hunisi (3)">
+        <svg class="i k" aria-hidden="true"><use href="#i-kanban"></use></svg><span class="yazi">Huni</span>
+        <span id="huniSayi" class="rozet-sayi gizli">0</span>
+      </button>
+    </nav>
+
+    <div class="ust-araclar">
+      <button id="btnTema" class="dg hayalet ikon" title="Tema: sistem" aria-label="Temayı değiştir">
+        <svg class="i" aria-hidden="true"><use href="#i-sun-moon"></use></svg>
+      </button>
+      <button id="btnKisayol" class="dg hayalet ikon" title="Klavye kısayolları (?)" aria-label="Klavye kısayolları">
+        <svg class="i" aria-hidden="true"><use href="#i-keyboard"></use></svg>
+      </button>
+      <button id="btnHakkinda" class="dg hayalet ikon" title="Hakkında" aria-label="Hakkında">
+        <svg class="i" aria-hidden="true"><use href="#i-info"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="govde">
+
+    <aside id="panel" class="panel" aria-label="Arama ve sonuçlar">
+      <button id="sheetTutamak" class="sheet-tutamak" type="button" aria-label="Paneli büyüt ya da küçült"><span></span></button>
+
+      <section id="aramaBlok" class="blok arama-blok">
+        <div class="kompakt-satir">
+          <button id="btnAramaAc" class="kompakt-bilgi" type="button" aria-expanded="false" aria-controls="aramaIc" title="Konumu ya da yarıçapı değiştir">
+            <span class="kompakt-ikon"><svg class="i" aria-hidden="true"><use href="#i-map-pin"></use></svg></span>
+            <span class="kompakt-metin"><b id="kompaktAd">Seçilen nokta</b><small id="kompaktAlt"></small></span>
+            <svg class="i k kompakt-ok" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <button id="btnKompaktTara" class="dg ikon" type="button" title="Yeniden tara (T)" aria-label="Yeniden tara">
+            <svg class="i" aria-hidden="true"><use href="#i-rotate-cw"></use></svg>
+          </button>
+        </div>
+
+        <div id="aramaIc" class="arama-ic">
+        <form id="aramaForm" class="arama-satir" autocomplete="off" role="search">
+          <label class="alan">
+            <svg class="i" aria-hidden="true"><use href="#i-search"></use></svg>
+            <span class="sr">Semt, mahalle ya da adres</span>
+            <input id="aramaKutusu" type="search" placeholder="Semt ya da adres, örn. Moda, Kadıköy" enterkeyhint="search">
+          </label>
+          <button class="dg" type="submit">Ara</button>
+          <button id="btnKonum" class="dg ikon" type="button" title="Konumumu kullan" aria-label="Konumumu kullan">
+            <svg class="i" aria-hidden="true"><use href="#i-locate-fixed"></use></svg>
+          </button>
+        </form>
+        <ul id="aramaSonuclari" class="sonuclar gizli" aria-label="Adres sonuçları"></ul>
+
+        <div class="yaricap">
+          <div class="yaricap-ust">
+            <label for="yaricap" class="etiket">Tarama yarıçapı</label>
+            <output id="yaricapYazi" for="yaricap">2<small>km</small></output>
+          </div>
+          <input id="yaricap" type="range" min="0.5" max="10" step="0.5" value="2">
+          <div class="cetvel" aria-hidden="true"><span>0,5</span><span>2,5</span><span>5</span><span>7,5</span><span>10 km</span></div>
+        </div>
+
+        <div id="merkezBilgi" class="merkez">
+          <svg class="i" aria-hidden="true"><use href="#i-map-pin"></use></svg>
+          <span>Henüz bir nokta seçilmedi</span>
+        </div>
+
+        <div class="tara-satir">
+          <button id="btnTara" class="dg ana" disabled>
+            <svg class="i" aria-hidden="true"><use href="#i-radar"></use></svg><span>Bu çevreyi tara</span>
+          </button>
+          <button id="btnIptal" class="dg gizli">İptal</button>
+          <button id="btnAramaKatla" class="dg ikon gizli" type="button" title="Arama alanını küçült" aria-label="Arama alanını küçült">
+            <svg class="i" aria-hidden="true"><use href="#i-chevron-up"></use></svg>
+          </button>
+        </div>
+        </div>
+
+        <div id="durum" class="durum gizli" role="status" aria-live="polite"></div>
+        <div id="ilerlemeKap" class="ilerleme gizli" role="progressbar" aria-label="Tarama ilerlemesi" aria-valuemin="0" aria-valuemax="100"><div id="ilerleme"></div></div>
+      </section>
+
+      <section id="filtreler" class="blok gizli" aria-label="Filtreler">
+        <div id="ozet" class="ozet" aria-live="polite"></div>
+        <div id="cipler" class="cipler" role="group" aria-label="Sektör"></div>
+        <div class="anahtarlar">
+          <label class="anahtar firsat"><input id="fSitesiz" type="checkbox"><span><svg class="i" aria-hidden="true"><use href="#i-globe"></use></svg>Kayıtlı sitesi yok</span></label>
+          <label class="anahtar"><input id="fTelefonlu" type="checkbox"><span><svg class="i" aria-hidden="true"><use href="#i-phone"></use></svg>Telefonu var</span></label>
+          <label class="anahtar acik"><input id="fAcik" type="checkbox"><span><svg class="i" aria-hidden="true"><use href="#i-clock"></use></svg>Şu an açık</span></label>
+          <label id="fZayifKap" class="anahtar zayif gizli"><input id="fZayif" type="checkbox"><span><svg class="i" aria-hidden="true"><use href="#i-triangle-alert"></use></svg>Zayıf site</span></label>
+          <label class="anahtar"><input id="fZincir" type="checkbox"><span><svg class="i" aria-hidden="true"><use href="#i-layers"></use></svg>Zincirleri gizle</span></label>
+        </div>
+        <div class="arac-satir">
+          <label class="alan kucuk">
+            <svg class="i k" aria-hidden="true"><use href="#i-list-filter"></use></svg>
+            <span class="sr">Sonuçlarda ara</span>
+            <input id="fMetin" type="search" placeholder="Sonuçlarda ara">
+          </label>
+          <label class="sr" for="fSirala">Sıralama</label>
+          <select id="fSirala" class="secim">
+            <option value="mesafe">En yakın</option>
+            <option value="puan">Fırsat puanı</option>
+            <option value="site">Zayıf site önce</option>
+            <option value="ad">A → Z</option>
+          </select>
+          <button id="btnCsv" class="dg kucuk ikon" title="Listeyi Excel uyumlu CSV olarak indir" aria-label="CSV indir">
+            <svg class="i k" aria-hidden="true"><use href="#i-file-spreadsheet"></use></svg>
+          </button>
+          <label class="dg kucuk ikon" title="Site sağlık kontrolü sonucunu yükle (araclar/semtim_kontrol.py çıktısı)" aria-label="Site kontrol sonucunu yükle">
+            <svg class="i k" aria-hidden="true"><use href="#i-upload"></use></svg>
+            <input id="kontrolDosya" type="file" accept=".csv,text/csv" class="sr">
+          </label>
+          <button id="btnYazdir" class="dg kucuk ikon" title="Ziyaret listesini yazdır (P)" aria-label="Ziyaret listesini yazdır">
+            <svg class="i k" aria-hidden="true"><use href="#i-printer"></use></svg>
+          </button>
+        </div>
+      </section>
+
+      <div id="listeKap" class="liste-kap">
+        <div id="bosDurum" class="bos">
+          <img class="bos-marka" src="img/semtim-ikon.png" alt="" width="64" height="73">
+          <h2>Çevrendeki işletmeleri keşfet</h2>
+          <p>Bir semtin işletmelerini çıkar, sitesi olmayanları bul, adayları takip et.</p>
+          <ol>
+            <li><span>Semt ara, konumunu kullan ya da haritada bir noktaya tıkla.</span></li>
+            <li><span>Yarıçapı seç ve <b>Bu çevreyi tara</b>'ya bas.</span></li>
+            <li><span><b>Fırsatlar</b>'dan aday seç, ara ya da huniye ekle.</span></li>
+          </ol>
+          <p class="dipnot">Veriler OpenStreetMap'ten anlık çekilir. Üyelik yok, ücret yok.</p>
+        </div>
+        <ul id="liste" class="liste" role="listbox" aria-label="İşletmeler"></ul>
+        <div class="daha"><button id="btnDahaFazla" class="dg kucuk gizli">Daha fazla göster</button></div>
+      </div>
+
+      <section id="detay" class="detay" aria-label="İşletme ayrıntıları" aria-hidden="true">
+        <div class="detay-ust">
+          <button id="btnDetayKapat" class="dg hayalet kucuk ikon" aria-label="Listeye dön (Esc)" title="Listeye dön (Esc)">
+            <svg class="i" aria-hidden="true"><use href="#i-x"></use></svg>
+          </button>
+          <span id="detayYol" class="yol"></span>
+          <button id="btnDetayOnceki" class="dg hayalet kucuk ikon" aria-label="Önceki (K)" title="Önceki (K)">
+            <svg class="i" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-chevron-right"></use></svg>
+          </button>
+          <button id="btnDetaySonraki" class="dg hayalet kucuk ikon" aria-label="Sonraki (J)" title="Sonraki (J)">
+            <svg class="i" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+          </button>
+        </div>
+        <div id="detayIc" class="detay-ic"></div>
+      </section>
+      <div id="panelBoyut" class="panel-boyut" role="separator" aria-orientation="vertical" aria-label="Panel genişliği" tabindex="0" title="Sürükle: panel genişliği · Çift tık: varsayılan"></div>
+    </aside>
+
+    <section class="harita-alan" aria-label="Harita">
+      <div id="harita"></div>
+      <div id="haritaIpucu" class="harita-ipucu">
+        <svg class="i" aria-hidden="true"><use href="#i-crosshair"></use></svg>Taranacak merkezi seçmek için haritaya tıkla
+      </div>
+      <div class="lejant" aria-label="Harita işaretleri">
+        <span><i style="--c:#1E88E5"></i>Kayıtlı sitesi var</span>
+        <span><i style="--c:#8E24AA"></i>Sadece sosyal medya</span>
+        <span><i style="--c:#F57C00"></i>Dijital izi yok</span>
+      </div>
+    </section>
+
+    <section id="huni" class="huni gizli" aria-label="Satış hunisi">
+      <div class="huni-ust">
+        <div>
+          <h2>Satış hunisi</h2>
+          <p id="huniOzet"></p>
+        </div>
+        <div class="bosluk"></div>
+        <div class="araclar">
+          <button id="btnHuniDisa" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-download"></use></svg>Yedekle</button>
+          <label class="dg kucuk" title="JSON yedeğini geri yükle">
+            <svg class="i k" aria-hidden="true"><use href="#i-upload"></use></svg>Geri yükle
+            <input id="huniDosya" type="file" accept="application/json,.json" class="sr">
+          </label>
+          <button id="btnHuniCsv" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-file-spreadsheet"></use></svg>CSV</button>
+        </div>
+      </div>
+      <div id="kolonlar" class="kolonlar"></div>
+    </section>
+  </main>
+
+  <dialog id="hakkinda" class="hakkinda" aria-labelledby="hakkindaBaslik">
+    <header class="hk-bas">
+      <span class="hk-logo"><img src="img/semtim-ikon.png" alt="" width="44" height="50"></span>
+      <div class="hk-baslik">
+        <h2 id="hakkindaBaslik">Semtim</h2>
+        <p>Yakınındaki işletmeleri keşfet. Sitesi olmayanları bul, müşteriye çevir.</p>
+      </div>
+      <span class="hk-surum">Sürüm 2.3</span>
+      <button class="hk-kapat" data-kapat aria-label="Kapat" title="Kapat (Esc)"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button>
+    </header>
+
+    <div class="hk-govde">
+      <ol class="hk-akis" aria-label="Nasıl çalışır">
+        <li style="--c:#1E88E5">
+          <span class="hk-adim"><svg class="i" aria-hidden="true"><use href="#i-radar"></use></svg></span>
+          <b>Keşfet</b>
+          <p>Seçtiğin noktanın 10 km çevresindeki işletmeleri OpenStreetMap'ten anlık çeker.</p>
+        </li>
+        <li style="--c:#F57C00">
+          <span class="hk-adim"><svg class="i" aria-hidden="true"><use href="#i-target"></use></svg></span>
+          <b>Fırsatlar</b>
+          <p>Kayıtlı web sitesi olmayan bağımsız işletmeleri 0–100 puanla sıralar.</p>
+        </li>
+        <li style="--c:#2E7D32">
+          <span class="hk-adim"><svg class="i" aria-hidden="true"><use href="#i-kanban"></use></svg></span>
+          <b>Huni</b>
+          <p>Adayları aşama, not ve takip tarihiyle izler, geciken takibi hatırlatır.</p>
+        </li>
+      </ol>
+
+      <div class="hk-iki">
+        <section>
+          <h3><svg class="i" aria-hidden="true"><use href="#i-shield-check"></use></svg>Gizlilik ve veri</h3>
+          <ul class="hk-liste">
+            <li><svg class="i" aria-hidden="true"><use href="#i-lock"></use></svg><span><b>Sunucu yok.</b> Aramaların ve notların hiçbir yere gönderilmez.</span></li>
+            <li><svg class="i" aria-hidden="true"><use href="#i-database"></use></svg><span><b>Bu tarayıcıda durur.</b> Taramalar 7 gün önbellekte, huni sen silene kadar.</span></li>
+            <li><svg class="i" aria-hidden="true"><use href="#i-wifi-off"></use></svg><span><b>Çevrimdışı açılır.</b> Son taramalar ve harita karoları cihazda kalır.</span></li>
+          </ul>
+          <button id="btnKvkk" class="hk-baglanti" type="button"><svg class="i k" aria-hidden="true"><use href="#i-shield-check"></use></svg>Gizlilik ve KVKK bilgilendirmesi<svg class="i k" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+        </section>
+        <section class="hk-cihaz">
+          <h3><svg class="i" aria-hidden="true"><use href="#i-history"></use></svg>Bu cihazda</h3>
+          <dl id="hkIstatistik" class="hk-sayilar"></dl>
+          <div class="hk-eylemler">
+            <button id="btnHkYedek" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-download"></use></svg>Huniyi yedekle</button>
+            <button id="btnHkKisayol" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-keyboard"></use></svg>Kısayollar</button>
+            <button id="btnOnbellek" class="dg kucuk tehlike"><svg class="i k" aria-hidden="true"><use href="#i-trash-2"></use></svg>Önbelleği temizle</button>
+          </div>
+        </section>
+      </div>
+
+      <a class="hk-gelistirici" href="https://ardaportfoy.vercel.app/" target="_blank" rel="noopener">
+        <span class="hk-monogram" aria-hidden="true">A</span>
+        <span class="hk-gelistirici-metin">
+          <b>Arda Irmak</b>
+          <span>Semtim'i tasarlayıp geliştirdi. Diğer projelerine göz at.</span>
+        </span>
+        <span class="hk-gelistirici-git">Portfolyo<svg class="i k" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg></span>
+      </a>
+
+      <p class="hk-not"><svg class="i" aria-hidden="true"><use href="#i-info"></use></svg><span>“Kayıtlı sitesi yok”, OpenStreetMap'te site bilgisinin girilmediği anlamına gelir. İşletmenin sitesi olup haritaya eklenmemiş olabilir. Eksik bilgiyi her işletmenin “OSM'de düzelt” bağlantısından herkes ekleyebilir.</span></p>
+    </div>
+
+    <footer class="hk-dip">
+      Geliştirici <a href="https://ardaportfoy.vercel.app/" target="_blank" rel="noopener">Arda Irmak</a> · Veri © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap katkıcıları</a> (ODbL) · Arama Nominatim · Sorgu Overpass API · Harita Leaflet · İkonlar Lucide
+    </footer>
+  </dialog>
+
+  <dialog id="gizlilik" class="gizlilik" aria-labelledby="gizlilikBaslik">
+    <div class="diyalog-ic">
+      <div class="diyalog-bas">
+        <svg class="i" aria-hidden="true"><use href="#i-shield-check"></use></svg>
+        <h2 id="gizlilikBaslik">Gizlilik ve KVKK bilgilendirmesi</h2>
+        <button class="dg hayalet kucuk ikon" data-kapat aria-label="Kapat"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button>
+      </div>
+      <div class="metin">
+        <p class="ozetle"><b>Kısaca:</b> Semtim'in kendi sunucusu ve veritabanı yoktur. Hesap açtırmaz, çerez ve takip aracı kullanmaz. Yazdığın aramalar, huni kayıtların ve notların yalnızca bu cihazdaki tarayıcıda durur.</p>
+
+        <h3>Uygulamayı sunan</h3>
+        <p>Semtim, Arda Irmak tarafından geliştirilen ve ücretsiz sunulan bir web uygulamasıdır. Soruların ve taleplerin için <a href="https://ardaportfoy.vercel.app/" target="_blank" rel="noopener">ardaportfoy.vercel.app</a> üzerinden iletişime geçebilirsin.</p>
+
+        <h3>Hangi bilgiler nerede tutulur?</h3>
+        <ul>
+          <li><b>Huni, notlar, takip tarihleri, site kontrol sonuçları, tema ve panel tercihleri:</b> tarayıcının yerel depolamasında (localStorage). Semtim'e ya da başka bir sunucuya gönderilmez.</li>
+          <li><b>Tarama sonuçları:</b> 7 gün boyunca tarayıcının IndexedDB deposunda önbelleğe alınır.</li>
+          <li><b>Konum:</b> “Konumumu kullan” yalnızca sen izin verirsen tarayıcıdan alınır ve sadece haritayı ortalamak için cihazında kullanılır. Seçtiğin noktanın koordinatları adres çubuğuna (#…) yazılır; bağlantıyı paylaşırsan karşı taraf bu noktayı görür.</li>
+        </ul>
+
+        <h3>Üçüncü taraf hizmetler</h3>
+        <p>Harita ve işletme verisi için tarayıcın doğrudan şu hizmetlere bağlanır. Bu bağlantılarda IP adresin, tarayıcı bilgisi ve aradığın adres ya da bölge ilgili hizmete iletilir; o hizmetin kendi gizlilik politikası geçerlidir:</p>
+        <ul>
+          <li>OpenStreetMap Vakfı: harita karoları ve adres arama (Nominatim). <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener">Gizlilik politikası</a></li>
+          <li>Overpass API sunucuları: işletme sorguları (overpass-api.de, overpass.kumi.systems, overpass.private.coffee).</li>
+          <li>Barındırma hizmeti: sayfanın yayınlandığı sunucu, her web sitesinde olduğu gibi standart erişim kayıtları (IP adresi, zaman) tutabilir.</li>
+        </ul>
+
+        <h3>İşletme verileri ve senin sorumlulukların</h3>
+        <p>Gösterilen işletme bilgileri OpenStreetMap'teki açık verilerdir (ODbL lisansı). Şahıs işletmelerinde telefon ve e-posta gibi bilgiler 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında kişisel veri sayılabilir.</p>
+        <ul>
+          <li>Bu bilgileri yalnızca meşru bir amaçla ve ölçülü kullan; CSV ile dışa aktardığın listeleri güvenli sakla.</li>
+          <li>SMS, e-posta ya da otomatik arama ile ticari ileti göndermek için 6563 sayılı Kanun gereği alıcının önceden onayı gerekir; İleti Yönetim Sistemi (İYS) kurallarına uy.</li>
+          <li>Kişi, kendisiyle ilgili bilgilerin silinmesini isterse OSM kaydını düzeltebilir ya da kaldırılmasını talep edebilir.</li>
+        </ul>
+
+        <h3>Hakların</h3>
+        <p>KVKK'nın 11. maddesi kapsamındaki taleplerin için yukarıdaki iletişim kanalını kullanabilirsin. Semtim senin hakkında sunucuda veri tutmadığı için, bu cihazdaki tüm Semtim verilerini aşağıdaki düğmeyle kendin, anında silebilirsin.</p>
+
+        <div class="gizlilik-sil">
+          <span><b>Bu cihazdaki tüm Semtim verilerini sil</b><small>Huni, notlar, site kontrol sonuçları, tarama önbelleği ve tercihler. Geri alınamaz; önce huniyi yedekleyebilirsin.</small></span>
+          <button id="btnTumVeriSil" class="dg kucuk tehlike"><svg class="i k" aria-hidden="true"><use href="#i-trash-2"></use></svg>Tümünü sil</button>
+        </div>
+        <p class="dipnot">Son güncelleme: 20 Kasım 2026. Bu metin bilgilendirme amaçlıdır, hukuki danışmanlık yerine geçmez.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="kisayollar" aria-labelledby="kisayolBaslik">
+    <div class="diyalog-ic">
+      <div class="diyalog-bas">
+        <svg class="i" aria-hidden="true"><use href="#i-keyboard"></use></svg>
+        <h2 id="kisayolBaslik">Klavye kısayolları</h2>
+        <button class="dg hayalet kucuk ikon" data-kapat aria-label="Kapat"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button>
+      </div>
+      <div class="kisayollar">
+        <span>Adres aramaya odaklan</span><span><kbd>/</kbd></span>
+        <span>Bu çevreyi tara</span><span><kbd>T</kbd></span>
+        <span>Keşfet · Fırsatlar · Huni</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span>
+        <span>Sonraki / önceki işletme</span><span><kbd>J</kbd><kbd>K</kbd></span>
+        <span>Seçili işletmeyi huniye ekle</span><span><kbd>H</kbd></span>
+        <span>Huni kartını önceki / sonraki aşamaya taşı</span><span><kbd>←</kbd><kbd>→</kbd></span>
+        <span>Ziyaret listesini yazdır</span><span><kbd>P</kbd></span>
+        <span>Ayrıntıyı kapat</span><span><kbd>Esc</kbd></span>
+        <span>Bu pencere</span><span><kbd>?</kbd></span>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="bildirim" class="bildirim" role="status" aria-live="polite"></div>
+  <div id="yazdir" class="yazdir" aria-hidden="true"></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js"></script>
+  <script src="js/ikonlar.js"></script>
+  <script src="js/turkce.js"></script>
+  <script src="js/sektor.js"></script>
+  <script src="js/saatler.js"></script>
+  <script src="js/huni.js"></script>
+  <script src="js/site-kontrol.js"></script>
+  <script src="js/surukle.js"></script>
+  <script src="js/veri.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
