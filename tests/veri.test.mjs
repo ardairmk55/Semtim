@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { yukle } from "./yukle.mjs";
+import { yukle, yukleOrtamla } from "./yukle.mjs";
 
 const S = yukle("turkce.js", "sektor.js", "veri.js", "ikonlar.js");
 const j = (x) => JSON.parse(JSON.stringify(x));
@@ -63,4 +63,29 @@ test("ikon yardımcısı bilinmeyen ikonda güvenli yedeğe düşer", () => {
   assert.match(S.ikon("phone"), /#i-phone/);
   assert.match(S.ikon("yok-boyle-ikon"), /#i-circle-alert/);
   assert.ok(j(Object.keys(S.ikonlar.YOL)).length >= 60);
+});
+
+test("Overpass: hata veren sunucudan yedeğe geçer, çalışanı sonra ilk dener", async () => {
+  const istekler = [];
+  const fetch = async (url) => {
+    istekler.push(new URL(url).host);
+    if (url.includes("overpass-api.de")) return { ok: false, status: 502 };
+    return { ok: true, status: 200, json: async () => ({ elements: [{ id: 1 }] }) };
+  };
+  const V = yukleOrtamla({ fetch }, "turkce.js", "sektor.js", "veri.js");
+  const d = await V.veri.overpass("[out:json];");
+  assert.equal(d.elements.length, 1);
+  assert.deepEqual(j(istekler), ["overpass-api.de", "overpass.kumi.systems"]);
+  istekler.length = 0;
+  await V.veri.overpass("[out:json];");
+  assert.deepEqual(j(istekler), ["overpass.kumi.systems"], "son çalışan sunucu önce denenir");
+});
+
+test("Overpass: kullanıcı iptali AbortError olarak yükselir", async () => {
+  const fetch = (url, { signal }) => new Promise((_, red) => signal.addEventListener("abort", () => red(new DOMException("x", "AbortError"))));
+  const V = yukleOrtamla({ fetch }, "turkce.js", "sektor.js", "veri.js");
+  const k = new AbortController();
+  const p = V.veri.overpass("[out:json];", k.signal);
+  setTimeout(() => k.abort(), 20);
+  await assert.rejects(p, (e) => e.name === "AbortError");
 });

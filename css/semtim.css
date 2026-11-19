@@ -838,8 +838,14 @@ dialog.gizlilik { width: min(680px, calc(100vw - 24px)); }
   .kolon { scroll-snap-align: center; }
   .huni-ust { padding: 14px; }
 }
-@media (max-width: 380px) {
+@media (max-width: 820px) {
+  #btnKisayol { display: none; } /* dokunmatikte klavye kısayolu yok; üst bar taşmasın */
+  .gorunumler { min-width: 0; }
+}
+@media (max-width: 420px) {
   .marka b { display: none; }
+  .ust { gap: 6px; }
+  .gorunum { padding: 0 9px; gap: 5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

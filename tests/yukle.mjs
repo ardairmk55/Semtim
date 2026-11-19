@@ -8,8 +8,16 @@ import vm from "node:vm";
 const kok = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 export function yukle(...dosyalar) {
+  return yukleOrtamla({}, ...dosyalar);
+}
+
+/** ek: bağlama eklenecek global'ler (ör. sahte fetch). */
+export function yukleOrtamla(ek, ...dosyalar) {
   const window = {};
-  const baglam = vm.createContext({ window, URL, Date, Math, JSON, Intl, console, DOMException: globalThis.DOMException });
+  const baglam = vm.createContext({
+    window, URL, URLSearchParams, Date, Math, JSON, Intl, console, DOMException: globalThis.DOMException,
+    AbortController, setTimeout, clearTimeout, Promise, ...ek,
+  });
   for (const d of dosyalar) {
     vm.runInContext(readFileSync(join(kok, "js", d), "utf8"), baglam, { filename: d });
   }

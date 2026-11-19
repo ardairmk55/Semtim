@@ -10,3 +10,5 @@ node_modules/
 package.json
 PRODUCT.md
 README.md
+docs/
+LICENSE

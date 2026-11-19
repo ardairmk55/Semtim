@@ -121,23 +121,41 @@ window.Semtim = window.Semtim || {};
     return sonuc;
   }
 
-  /** Overpass'e sorar; hata/yoğunlukta sıradaki sunucuya geçer, sonra baştan bir tur daha dener. */
+  // Son başarılı yanıt veren sunucu bir sonraki sorguda ilk denenir.
+  let iyiSunucu = 0;
+  // Bir sunucuya tanınan süre: ilk turda kısa (hızla yedeğe geç), ikinci turda uzun (yoğunlukta sabret).
+  const SURE_SINIRI = [40000, 90000];
+
+  /** Overpass'e sorar; hata, yoğunluk ya da süre aşımında sıradaki sunucuya geçer, sonra bir tur daha dener. */
   async function overpass(sorgu, sinyal) {
     let son;
+    const sira = OVERPASS.map((_, i) => (i + iyiSunucu) % OVERPASS.length);
     for (let tur = 0; tur < 2; tur++) {
-      for (const u of OVERPASS) {
+      for (const i of sira) {
+        const u = OVERPASS[i];
+        const kontrol = new AbortController();
+        const iptal = () => kontrol.abort();
+        sinyal?.addEventListener("abort", iptal, { once: true });
+        const zaman = setTimeout(() => kontrol.abort(), SURE_SINIRI[tur]);
         try {
           const y = await fetch(u, {
             method: "POST",
             body: "data=" + encodeURIComponent(sorgu),
             headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-            signal: sinyal,
+            signal: kontrol.signal,
           });
-          if (y.ok) return await y.json();
+          if (y.ok) {
+            const veri = await y.json();
+            iyiSunucu = i;
+            return veri;
+          }
           son = new Error(`${new URL(u).host} ${y.status}`);
         } catch (e) {
-          if (e.name === "AbortError") throw e;
-          son = e;
+          if (sinyal?.aborted) throw new DOMException("İptal", "AbortError"); // kullanıcı iptal etti
+          son = e.name === "AbortError" ? new Error(`${new URL(u).host} yanıt vermedi`) : e;
+        } finally {
+          clearTimeout(zaman);
+          sinyal?.removeEventListener("abort", iptal);
         }
       }
       await bekle(3000 * (tur + 1), sinyal);
@@ -294,5 +312,5 @@ window.Semtim = window.Semtim || {};
     return { ...sonuc, onbellekten: false };
   }
 
-  S.veri = { tara, konumAra, onbellekTemizle, onbellekSayisi, firsatPuani, dijitalDurum, kayit, tekillestir, bolgeler, sorguMetni, EN_FAZLA_YARICAP };
+  S.veri = { tara, overpass, konumAra, onbellekTemizle, onbellekSayisi, firsatPuani, dijitalDurum, kayit, tekillestir, bolgeler, sorguMetni, EN_FAZLA_YARICAP };
 })(window.Semtim);
