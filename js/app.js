@@ -27,8 +27,9 @@
       return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
     }
   }
-  const huni = S.huni.olustur(guvenliDepo());
-  const kontrol = S.siteKontrol.olustur(guvenliDepo());
+  const depo = guvenliDepo();
+  const huni = S.huni.olustur(depo);
+  const kontrol = S.siteKontrol.olustur(depo);
   const siteSkoru = (x) => (x.web ? kontrol.al(x.id)?.skor ?? null : null);
 
   const D = {
@@ -142,7 +143,7 @@
     iconCreateFunction: (c) => {
       const n = c.getChildCount();
       const sinif = n >= 200 ? "buyuk" : n >= 50 ? "orta" : "";
-      const boy = n >= 200 ? 54 : n >= 50 ? 46 : 40;
+      const boy = n >= 200 ? 58 : n >= 50 ? 50 : 44; // WCAG 2.2: dokunma hedefi en az 44 px
       return L.divIcon({ html: `<div class="kume ${sinif}">${sayi(n)}</div>`, className: "marker-cluster", iconSize: [boy, boy] });
     },
   });
@@ -150,6 +151,22 @@
   let merkezIsaret = null, daire = null;
 
   harita.on("click", (e) => merkezSec(e.latlng.lat, e.latlng.lng, "Haritada seçilen nokta", false));
+
+  /* Harita, taranan alanın dışına kaydırıldığında "Bu alanda tara" önerilir (harita uygulamalarının
+     bilinen davranışı). Eşik: merkez, taranan yarıçapın yarısından fazla kaymışsa. */
+  function alanTaraGuncelle() {
+    const b = $("btnAlanTara");
+    if (!D.taranan || D.kontrol) return b.classList.add("gizli");
+    const m = harita.getCenter();
+    const uzak = S.tr.mesafe(D.taranan.lat, D.taranan.lng, m.lat, m.lng) > D.taranan.r * 0.5;
+    b.classList.toggle("gizli", !uzak);
+  }
+  harita.on("moveend zoomend", alanTaraGuncelle);
+  $("btnAlanTara").addEventListener("click", () => {
+    const m = harita.getCenter();
+    $("btnAlanTara").classList.add("gizli");
+    merkezSec(m.lat, m.lng, "Haritada seçilen alan", true);
+  });
 
   function merkezSec(lat, lng, ad, otomatikTara) {
     D.merkez = { lat, lng, ad };
@@ -220,6 +237,9 @@
   function panelGenislik(px, kaydet) {
     const en = Math.round(Math.min(Math.max(px, 340), Math.min(780, window.innerWidth * 0.62)));
     document.documentElement.style.setProperty("--panel-w", en + "px");
+    const tut = $("panelBoyut");
+    tut.setAttribute("aria-valuenow", String(en));
+    tut.setAttribute("aria-valuetext", `${en} piksel`);
     if (kaydet) try { localStorage.setItem(PANEL_ANAHTAR, String(en)); } catch (e) { /* yoksay */ }
     harita.invalidateSize({ pan: false });
   }
@@ -330,6 +350,7 @@
       : yenile ? ikon("rotate-cw") + "<span>Yeniden tara</span>" : ikon("radar") + "<span>Bu çevreyi tara</span>";
     b.dataset.yenile = yenile ? "1" : "";
     b.title = yenile ? "Önbelleği atlayıp güncel veriyi çek (T)" : "Seçili çevreyi tara (T)";
+    alanTaraGuncelle();
   }
 
   /* ------------------------------------------------------------ durum */
@@ -523,13 +544,14 @@
     return r.join("");
   }
 
-  function kartHtml(x) {
+  function kartHtml(x, puanModu = D.mod === "firsat" || $("fSirala").value === "puan") {
     const s = SEKTOR[x.sektor];
-    const puanGoster = (D.mod === "firsat" || $("fSirala").value === "puan") && x.puan > 0;
+    const puanGoster = puanModu && x.puan > 0;
     const sag = puanGoster
       ? `<span class="puan ${x.puan >= 75 ? "yuksek" : ""}" title="Fırsat puanı">${x.puan}</span>`
       : `<span class="kart-ok">${ikon("chevron-right")}</span>`;
-    return `<li class="kart" role="option" tabindex="0" data-id="${h(x.id)}" aria-selected="${D.secili === x.id}">
+    const odak = D.secili ? D.secili === x.id : D.filtreli[0]?.id === x.id;
+    return `<li class="kart" role="option" tabindex="${odak ? 0 : -1}" data-id="${h(x.id)}" aria-selected="${D.secili === x.id}">
       <span class="sektor-kutu" style="--c:${s.renk}">${ikon(s.ikon)}</span>
       <div style="min-width:0">
         <p class="kart-ad">${h(x.ad)}</p>
@@ -540,8 +562,9 @@
 
   function listeCiz() {
     const bolum = D.filtreli.slice(0, D.gosterilen);
+    const puanModu = D.mod === "firsat" || $("fSirala").value === "puan";
     $("liste").innerHTML = bolum.length
-      ? bolum.map(kartHtml).join("")
+      ? bolum.map((x) => kartHtml(x, puanModu)).join("")
       : `<li class="bos"><div class="bos-ikon">${ikon("list-filter")}</div><h2>Eşleşen işletme yok</h2><p>Filtreleri gevşet ya da yarıçapı büyüt.</p></li>`;
     const kalan = D.filtreli.length - D.gosterilen;
     $("btnDahaFazla").classList.toggle("gizli", kalan <= 0);
@@ -591,8 +614,9 @@
     if (tarali && D.isaretler.get(id)) D.isaretler.get(id).setIcon(isaretIkonu(tarali, true));
 
     document.querySelectorAll('.kart[aria-selected="true"]').forEach((el) => el.setAttribute("aria-selected", "false"));
+    document.querySelectorAll('.kart[tabindex="0"]').forEach((el) => el.setAttribute("tabindex", "-1"));
     const kart = document.querySelector(`.kart[data-id="${CSS.escape(id)}"]`);
-    if (kart) kart.setAttribute("aria-selected", "true");
+    if (kart) { kart.setAttribute("aria-selected", "true"); kart.setAttribute("tabindex", "0"); }
 
     if (haritayaGit) {
       const m = D.isaretler.get(id);
@@ -667,7 +691,7 @@
     }
 
     const firsat = x.puan > 0
-      ? `<div class="firsat-kutu"><span class="puan ${x.puan >= 75 ? "yuksek" : ""}">${x.puan}</span><b>Fırsat puanı</b><p>${h(x.neden.join(" · "))}</p></div>
+      ? `<div class="firsat-kutu"><span class="puan ${x.puan >= 75 ? "yuksek" : ""}">${x.puan}</span><b>Fırsat puanı <span class="kolon-oran">${x.puan >= 75 ? "yüksek öncelik" : x.puan >= 50 ? "orta öncelik" : "düşük öncelik"}</span></b><p>${h(x.neden.join(" · "))}</p><span class="puan-olcek"><i style="width:${x.puan}%"></i></span></div>
          <p class="uyari-not">${ikon("info")}<span>Puan, OSM'deki kayda dayanır. İşletmenin sitesi olup haritaya girilmemiş olabilir.</span></p>`
       : "";
 
@@ -785,11 +809,16 @@
         <h3>Huni henüz boş</h3>
         <p>Bir işletmenin ayrıntısında aşama seç ya da seçiliyken <kbd>H</kbd>'ye bas. Kayıtlar yalnızca bu tarayıcıda durur.</p>
         <button class="dg ana" data-mod-git="firsat">${ikon("target")}Fırsatlara git</button></div>`;
+      $("huniOlcek").classList.add("gizli");
       return;
     }
+    // Aşama dağılımı: hangi aşamada ne kadar aday var, tek bakışta.
+    $("huniOlcek").innerHTML = ASAMALAR.filter((a) => g[a.id].length)
+      .map((a) => `<span style="flex:${g[a.id].length};background:${a.renk}" title="${h(a.ad)}: ${sayi(g[a.id].length)}"></span>`).join("");
+    $("huniOlcek").classList.remove("gizli");
     $("kolonlar").innerHTML = ASAMALAR.map((a) => `
       <section class="kolon" data-asama="${a.id}" style="--c:${a.renk}" aria-label="${a.ad}">
-        <div class="kolon-bas">${ikon(a.ikon)}${a.ad}<span class="rozet-sayi">${sayi(g[a.id].length)}</span></div>
+        <div class="kolon-bas">${ikon(a.ikon)}${a.ad}<span class="rozet-sayi">${sayi(g[a.id].length)}</span>${g[a.id].length ? `<span class="kolon-oran">%${Math.round((g[a.id].length / n) * 100)}</span>` : ""}</div>
         <div class="kolon-ic">${g[a.id].length ? g[a.id].map((k) => huniKartHtml(k, gun)).join("") : `<div class="kolon-bos">Buraya sürükle</div>`}</div>
       </section>`).join("");
   }
@@ -899,6 +928,8 @@
     document.querySelectorAll(".gorunum").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mod === m)));
     $("huni").classList.toggle("gizli", m !== "huni");
     if (m === "huni") {
+      detayKapat();
+      tasiMenusuKapat();
       huniCiz();
       return;
     }
@@ -922,6 +953,7 @@
   const tarihEki = () => new Date().toISOString().slice(0, 10);
 
   function csvIndir() {
+    if (!D.filtreli.length) { bildirim("Dışa aktarılacak sonuç yok", "info"); return; }
     const basliklar = ["ad", "sektor", "mesafe_m", "telefon", "whatsapp", "web", "instagram", "facebook", "eposta", "adres", "saatler", "su_an", "dijital", "firsat_puani", "neden", "zincir", "huni_asama", "takip", "not", "site_skoru", "osm", "lat", "lng"];
     const satirlar = D.filtreli.map((x) => {
       const k = huni.al(x.id);
@@ -1068,9 +1100,18 @@
   $("liste").addEventListener("keydown", (e) => {
     const k = e.target.closest(".kart[data-id]");
     if (!k) return;
+    const tasi = (hedef) => {
+      if (!hedef || !hedef.classList.contains("kart")) return;
+      k.setAttribute("tabindex", "-1");
+      hedef.setAttribute("tabindex", "0");
+      hedef.focus();
+      hedef.scrollIntoView({ block: "nearest" });
+    };
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sec(k.dataset.id); }
-    else if (e.key === "ArrowDown") { e.preventDefault(); k.nextElementSibling?.focus(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); k.previousElementSibling?.focus(); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); tasi(k.nextElementSibling); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); tasi(k.previousElementSibling); }
+    else if (e.key === "Home") { e.preventDefault(); tasi($("liste").firstElementChild); }
+    else if (e.key === "End") { e.preventDefault(); tasi($("liste").lastElementChild); }
   });
   $("btnDahaFazla").addEventListener("click", () => { D.gosterilen += SAYFA; listeCiz(); });
   $("btnCsv").addEventListener("click", csvIndir);
@@ -1287,9 +1328,17 @@
   window.addEventListener("offline", () => bildirim("Çevrimdışısın. Önbellekteki taramalar yine açılır.", "wifi-off"));
   window.addEventListener("online", () => bildirim("Bağlantı geri geldi", "circle-check"));
 
-  // Huni başka bir sekmede değişirse sayacı ve görünümü tazele
+  /* Huni başka bir sekmede değişirse yalnızca etkilenen yerler tazelenir.
+     Eskiden location.reload() çağrılıyordu; bu, süren bir taramayı iptal ediyordu. */
   window.addEventListener("storage", (e) => {
-    if (e.key === S.huni.ANAHTAR) location.reload();
+    if (e.key !== S.huni.ANAHTAR && e.key !== S.siteKontrol.ANAHTAR) return;
+    if (e.key === S.huni.ANAHTAR) huni.yenidenOku();
+    else kontrol.yenidenOku();
+    huniSayaci();
+    $("fZayifKap").classList.toggle("gizli", !kontrol.sayi());
+    if (D.mod === "huni") huniCiz();
+    else if (D.kayitlar.length) { listeCiz(); isaretleriCiz(); }
+    if (D.detay) detayCiz();
   });
 
   /* ------------------------------------------------------------ PWA: service worker
@@ -1297,8 +1346,36 @@
      Yerelde denemek için adrese ?sw=1 ekle. */
   const yerel = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !/[?&]sw=1/.test(location.search);
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !yerel) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* PWA isteğe bağlı */ }));
+    window.addEventListener("load", async () => {
+      try {
+        const kayit = await navigator.serviceWorker.register("sw.js");
+        // Yeni sürüm indirildiğinde sayfa kendiliğinden eskimesin: kullanıcıya yenileme sun.
+        const izle = (sw) => sw && sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) $("guncelleme").classList.remove("gizli");
+        });
+        if (kayit.waiting && navigator.serviceWorker.controller) $("guncelleme").classList.remove("gizli");
+        izle(kayit.installing);
+        kayit.addEventListener("updatefound", () => izle(kayit.installing));
+        $("btnGuncelle").addEventListener("click", () => location.reload());
+        // Uygulama uzun süre açık kalırsa saatte bir güncelleme ara.
+        setInterval(() => kayit.update().catch(() => {}), 60 * 60 * 1000);
+      } catch (e) { /* PWA isteğe bağlı */ }
+    });
   }
+
+  /* Beklenmedik hata sessizce kaybolmasın: kullanıcı neyin bozulduğunu görsün. */
+  let hataZaman = 0;
+  function hatayiGoster(mesaj) {
+    if (Date.now() - hataZaman < 5000) return; // hata fırtınasında tek bildirim
+    hataZaman = Date.now();
+    bildirim(`Beklenmeyen bir hata oluştu: ${h(String(mesaj).slice(0, 120))}`, "circle-alert");
+  }
+  window.addEventListener("error", (e) => { if (e.message) hatayiGoster(e.message); });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    if (r && (r.name === "AbortError" || r.name === "NotAllowedError")) return;
+    hatayiGoster(r?.message || r);
+  });
 
   /* ------------------------------------------------------------ başlangıç */
   temaUygula(document.documentElement.dataset.temaTercih || "sistem");

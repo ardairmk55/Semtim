@@ -90,3 +90,21 @@ test("dinleyiciler değişiklikte çağrılır, sil çalışır", () => {
   assert.equal(n, 2);
   assert.equal(h.sayi(), 0);
 });
+
+test("yenidenOku: başka sekmenin yazdığını belleğe alır, yazma yapmaz", () => {
+  const depo = sahteDepo();
+  const h = olustur(depo, saat);
+  h.guncelle(isletme, { asama: "aday" });
+  // Başka bir sekme aynı anahtarı değiştirdi
+  const disaridan = JSON.parse(depo.getItem(ANAHTAR));
+  disaridan["node/42"].asama = "musteri";
+  disaridan["node/99"] = { ...disaridan["node/42"], id: "node/99", ad: "Yeni" };
+  depo.ham.set(ANAHTAR, JSON.stringify(disaridan));
+  h.yenidenOku();
+  assert.equal(h.al("node/42").asama, "musteri");
+  assert.equal(h.sayi(), 2);
+  // bozuk veri eldeki hâli bozmamalı
+  depo.ham.set(ANAHTAR, "{bozuk");
+  h.yenidenOku();
+  assert.equal(h.sayi(), 2);
+});

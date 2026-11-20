@@ -22,20 +22,20 @@
 <body>
 
   <header class="ust">
-    <a class="marka" href="./" aria-label="Semtim ana sayfa">
+    <a class="marka" href="./" title="Semtim ana sayfa">
       <img src="img/semtim-ikon.png" alt="" width="30" height="34">
       <span><b>Semtim</b><small>Yakınındaki işletmeleri keşfet.</small></span>
     </a>
 
     <nav class="gorunumler" role="tablist" aria-label="Görünüm">
-      <button class="gorunum" role="tab" id="sekmeKesif" data-mod="kesif" aria-selected="true" title="Keşfet (1)">
+      <button class="gorunum" role="tab" id="sekmeKesif" data-mod="kesif" aria-selected="true" aria-controls="panel" title="Keşfet (1)">
         <svg class="i k" aria-hidden="true"><use href="#i-radar"></use></svg><span class="yazi">Keşfet</span>
       </button>
-      <button class="gorunum" role="tab" id="sekmeFirsat" data-mod="firsat" aria-selected="false" title="Fırsatlar (2)">
+      <button class="gorunum" role="tab" id="sekmeFirsat" data-mod="firsat" aria-selected="false" aria-controls="panel" title="Fırsatlar (2)">
         <svg class="i k" aria-hidden="true"><use href="#i-target"></use></svg><span class="yazi">Fırsatlar</span>
         <span id="firsatSayi" class="rozet-sayi firsat gizli">0</span>
       </button>
-      <button class="gorunum" role="tab" id="sekmeHuni" data-mod="huni" aria-selected="false" title="Satış hunisi (3)">
+      <button class="gorunum" role="tab" id="sekmeHuni" data-mod="huni" aria-selected="false" aria-controls="huni" title="Satış hunisi (3)">
         <svg class="i k" aria-hidden="true"><use href="#i-kanban"></use></svg><span class="yazi">Huni</span>
         <span id="huniSayi" class="rozet-sayi gizli">0</span>
       </button>
@@ -56,7 +56,7 @@
 
   <main class="govde">
 
-    <aside id="panel" class="panel" aria-label="Arama ve sonuçlar">
+    <div id="panel" class="panel" role="tabpanel" tabindex="-1" aria-labelledby="sekmeKesif">
       <button id="sheetTutamak" class="sheet-tutamak" type="button" aria-label="Paneli büyüt ya da küçült"><span></span></button>
 
       <section id="aramaBlok" class="blok arama-blok">
@@ -142,7 +142,7 @@
           </button>
           <label class="dg kucuk ikon" title="Site sağlık kontrolü sonucunu yükle (araclar/semtim_kontrol.py çıktısı)" aria-label="Site kontrol sonucunu yükle">
             <svg class="i k" aria-hidden="true"><use href="#i-upload"></use></svg>
-            <input id="kontrolDosya" type="file" accept=".csv,text/csv" class="sr">
+            <input id="kontrolDosya" type="file" accept=".csv,text/csv" class="gizli-dosya">
           </label>
           <button id="btnYazdir" class="dg kucuk ikon" title="Ziyaret listesini yazdır (P)" aria-label="Ziyaret listesini yazdır">
             <svg class="i k" aria-hidden="true"><use href="#i-printer"></use></svg>
@@ -162,7 +162,8 @@
           </ol>
           <p class="dipnot">Veriler OpenStreetMap'ten anlık çekilir. Üyelik yok, ücret yok.</p>
         </div>
-        <ul id="liste" class="liste" role="listbox" aria-label="İşletmeler"></ul>
+        <ul id="liste" class="liste" role="listbox" aria-label="İşletmeler" aria-describedby="listeIpucu"></ul>
+        <p id="listeIpucu" class="sr">Yukarı ve aşağı ok tuşlarıyla gez, Enter ile ayrıntıyı aç.</p>
         <div class="daha"><button id="btnDahaFazla" class="dg kucuk gizli">Daha fazla göster</button></div>
       </div>
 
@@ -181,11 +182,14 @@
         </div>
         <div id="detayIc" class="detay-ic"></div>
       </section>
-      <div id="panelBoyut" class="panel-boyut" role="separator" aria-orientation="vertical" aria-label="Panel genişliği" tabindex="0" title="Sürükle: panel genişliği · Çift tık: varsayılan"></div>
-    </aside>
+      <div id="panelBoyut" class="panel-boyut" role="separator" aria-orientation="vertical" aria-label="Panel genişliği" aria-valuemin="340" aria-valuemax="780" aria-valuenow="432" tabindex="0" title="Sürükle: panel genişliği · Çift tık: varsayılan"></div>
+    </div>
 
     <section class="harita-alan" aria-label="Harita">
       <div id="harita"></div>
+      <button id="btnAlanTara" class="alan-tara gizli" type="button">
+        <svg class="i k" aria-hidden="true"><use href="#i-radar"></use></svg>Bu alanda tara
+      </button>
       <div id="haritaIpucu" class="harita-ipucu">
         <svg class="i" aria-hidden="true"><use href="#i-crosshair"></use></svg>Taranacak merkezi seçmek için haritaya tıkla
       </div>
@@ -196,7 +200,7 @@
       </div>
     </section>
 
-    <section id="huni" class="huni gizli" aria-label="Satış hunisi">
+    <section id="huni" class="huni gizli" role="tabpanel" tabindex="-1" aria-labelledby="sekmeHuni">
       <div class="huni-ust">
         <div>
           <h2>Satış hunisi</h2>
@@ -207,11 +211,12 @@
           <button id="btnHuniDisa" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-download"></use></svg>Yedekle</button>
           <label class="dg kucuk" title="JSON yedeğini geri yükle">
             <svg class="i k" aria-hidden="true"><use href="#i-upload"></use></svg>Geri yükle
-            <input id="huniDosya" type="file" accept="application/json,.json" class="sr">
+            <input id="huniDosya" type="file" accept="application/json,.json" class="gizli-dosya">
           </label>
           <button id="btnHuniCsv" class="dg kucuk"><svg class="i k" aria-hidden="true"><use href="#i-file-spreadsheet"></use></svg>CSV</button>
         </div>
       </div>
+      <div id="huniOlcek" class="huni-olcek gizli" aria-hidden="true"></div>
       <div id="kolonlar" class="kolonlar"></div>
     </section>
   </main>
@@ -223,7 +228,7 @@
         <h2 id="hakkindaBaslik">Semtim</h2>
         <p>Yakınındaki işletmeleri keşfet. Sitesi olmayanları bul, müşteriye çevir.</p>
       </div>
-      <span class="hk-surum">Sürüm 2.4</span>
+      <span class="hk-surum">Sürüm 2.5</span>
       <button class="hk-kapat" data-kapat aria-label="Kapat" title="Kapat (Esc)"><svg class="i" aria-hidden="true"><use href="#i-x"></use></svg></button>
     </header>
 
@@ -354,6 +359,11 @@
   </dialog>
 
   <div id="bildirim" class="bildirim" role="status" aria-live="polite"></div>
+  <div id="guncelleme" class="guncelleme gizli" role="status">
+    <svg class="i" aria-hidden="true"><use href="#i-rotate-cw"></use></svg>
+    <span>Semtim'in yeni sürümü hazır.</span>
+    <button id="btnGuncelle" class="dg kucuk" type="button">Yenile</button>
+  </div>
   <div id="yazdir" class="yazdir" aria-hidden="true"></div>
 
   <script src="vendor/leaflet/leaflet.js"></script>

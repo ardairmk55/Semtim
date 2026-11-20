@@ -400,6 +400,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--focu
 .eylem.wa .i { color: #128C4A; }
 :root[data-theme="dark"] .eylem.wa .i { color: #4ADE80; }
 .eylem[aria-disabled="true"] { opacity: 0.38; pointer-events: none; }
+.detay-ic { scroll-padding-top: 86px; }
 
 .firsat-kutu { margin-top: 16px; padding: 12px 14px; border-radius: var(--r); background: var(--firsat-soft); display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; }
 .firsat-kutu .puan { grid-row: span 2; height: 40px; min-width: 48px; font-size: 18px; }
@@ -479,12 +480,12 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--focu
 .isaret.hunide::after { content: ""; position: absolute; top: -4px; left: 50%; margin-left: -6px; width: 9px; height: 9px; border-radius: 50%; background: var(--h); border: 2px solid var(--surface); }
 .merkez-isaret { width: 20px; height: 20px; border-radius: 50%; background: var(--lacivert); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
 .kume {
-  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
   background: var(--lacivert); color: #fff; font-weight: 800; font-size: 12.5px; font-variant-numeric: tabular-nums;
   border: 3px solid #fff; box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.4);
 }
-.kume.orta { width: 46px; height: 46px; background: #12305A; }
-.kume.buyuk { width: 54px; height: 54px; font-size: 13.5px; }
+.kume.orta { width: 50px; height: 50px; background: #12305A; }
+.kume.buyuk { width: 58px; height: 58px; font-size: 13.5px; }
 :root[data-theme="dark"] .kume { background: var(--brand); box-shadow: 0 0 0 4px rgba(5, 14, 26, 0.55), 0 4px 10px rgba(0, 0, 0, 0.5); }
 .marker-cluster { background: none !important; }
 
@@ -787,6 +788,44 @@ dialog.gizlilik { width: min(680px, calc(100vw - 24px)); }
 .site-ozellik .rozet .i { width: 12px; height: 12px; }
 .site-saglik p { margin-top: 6px; font-size: 12px; color: var(--ink-2); }
 
+/* ------------------------------------------------------------------ yeni sürüm bandı */
+.guncelleme {
+  position: fixed; left: 50%; transform: translate(-50%, 0); bottom: 24px; z-index: 3100;
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow-3);
+  font-size: 13px; font-weight: 600; max-width: calc(100vw - 24px);
+  animation: bandGir 0.4s var(--ease);
+}
+.guncelleme .i { color: var(--brand-ink); }
+@keyframes bandGir { from { opacity: 0; transform: translate(-50%, 12px); } }
+
+/* Gizli dosya girişi: görünmez ama odak halkası etiketi sarar. */
+.gizli-dosya { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+label.dg:focus-within { box-shadow: var(--focus); border-color: var(--mavi); }
+
+/* ------------------------------------------------------------------ haritada "bu alanda tara" */
+.alan-tara {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 600;
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 999px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line-2); box-shadow: var(--shadow-2);
+  font-size: 13.5px; font-weight: 650; white-space: nowrap;
+  animation: bandGir 0.3s var(--ease);
+}
+.alan-tara .i { color: var(--brand-ink); }
+.alan-tara:hover { background: var(--hover); }
+.alan-tara:active { transform: translateX(-50%) translateY(1px); }
+
+/* ------------------------------------------------------------------ fırsat puanı ölçeği */
+.puan-olcek { height: 5px; border-radius: 5px; background: color-mix(in srgb, var(--firsat) 20%, transparent); overflow: hidden; margin-top: 8px; grid-column: 1 / -1; }
+.puan-olcek i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--firsat), #FFB25C); }
+.firsat-kutu { grid-template-columns: auto 1fr; }
+
+/* ------------------------------------------------------------------ huni dönüşüm çubuğu */
+.huni-olcek { display: flex; height: 6px; border-radius: 6px; overflow: hidden; margin: 10px 20px 0; background: var(--surface-3); }
+.huni-olcek span { height: 100%; transition: flex-grow 0.4s var(--ease); }
+.huni-olcek span + span { border-left: 1px solid var(--surface-2); }
+.kolon-oran { font-size: 12px; font-weight: 650; color: var(--ink-3); margin-left: 6px; font-variant-numeric: tabular-nums; }
+
 /* ------------------------------------------------------------------ duyarlı */
 @media (max-width: 1080px) {
   .marka small { display: none; }
@@ -830,6 +869,14 @@ dialog.gizlilik { width: min(680px, calc(100vw - 24px)); }
     border-top: 1px solid var(--line-2); box-shadow: 0 -16px 40px -12px rgba(0, 0, 0, 0.35); transform: translateY(24px);
   }
   .detay.acik { transform: none; }
+  /* Sahada tek elle kullanım: Ara / WhatsApp, uzun ayrıntıda da parmağın altında kalsın. */
+  .detay-ic .eylemler {
+    position: sticky; top: -18px; z-index: 4; margin: 16px -18px 0; padding: 10px 18px 12px;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+  }
+  .detay-ic .eylemler::before {
+    content: ""; position: absolute; inset: 0 0 auto; height: 10px; top: -10px; background: var(--surface);
+  }
   .blok { padding: 12px 14px; }
   .lejant { display: none; }
   .harita-alan .leaflet-bottom { bottom: var(--sheet-px, 0px); transition: bottom 0.38s var(--ease); }

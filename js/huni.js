@@ -57,6 +57,15 @@ window.Semtim = window.Semtim || {};
       dinleyiciler.forEach((f) => f());
     }
 
+    /** Depodaki güncel hâli belleğe alır. Başka bir sekme veriyi değiştirdiğinde kullanılır; yazma yapmaz. */
+    function yenidenOku() {
+      try {
+        const ham = JSON.parse(depo.getItem(ANAHTAR) || "null");
+        kayitlar = ham && typeof ham === "object" ? temizle(ham) : {};
+      } catch (e) { /* bozuk veri: eldeki hâli koru */ }
+      return kayitlar;
+    }
+
     function yeniKayit(id, alanlar) {
       const t = saat();
       return { id, asama: "aday", not: "", takip: "", olusturma: t, guncel: t, ...alanlar };
@@ -129,7 +138,7 @@ window.Semtim = window.Semtim || {};
 
     oku();
     return {
-      al, liste, gruplar, guncelle, sil, hepsiniSil, gecikenler, disaAktar, iceAktar,
+      al, liste, gruplar, guncelle, sil, hepsiniSil, gecikenler, disaAktar, iceAktar, yenidenOku,
       dinle: (f) => { dinleyiciler.add(f); return () => dinleyiciler.delete(f); },
       sayi: () => Object.keys(kayitlar).length,
     };

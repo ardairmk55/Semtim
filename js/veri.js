@@ -5,7 +5,7 @@ window.Semtim = window.Semtim || {};
 (function (S) {
   "use strict";
 
-  const SURUM = "v1";
+  const SURUM = "v2"; // önbellek biçimi; anahtar hassasiyeti değiştiğinde artırılır
   const ONBELLEK_GUN = 7;
   const EN_FAZLA_YARICAP = 5000; // 5 km: genel Overpass sunucularını yormadan makul sürede yanıt alınan üst sınır
   // Ücretsiz, gönüllü Overpass sunucuları. Yoğunlukta biri dolarken diğeri boş olabilir; hepsi yarıştırılır.
@@ -94,8 +94,11 @@ window.Semtim = window.Semtim || {};
   /* ------------------------------------------------------------ ağ */
   const bekle = (ms, sinyal) =>
     new Promise((coz, red) => {
-      const z = setTimeout(coz, ms);
-      sinyal?.addEventListener("abort", () => { clearTimeout(z); red(new DOMException("İptal", "AbortError")); }, { once: true });
+      // Dinleyici her iki yolda da kaldırılır; uzun ömürlü sinyalde birikmesin.
+      const iptal = () => { clearTimeout(z); red(new DOMException("İptal", "AbortError")); };
+      const z = setTimeout(() => { sinyal?.removeEventListener("abort", iptal); coz(); }, ms);
+      if (sinyal?.aborted) return iptal();
+      sinyal?.addEventListener("abort", iptal, { once: true });
     });
 
   // Nominatim kuralı: saniyede en fazla 1 istek, yazarken otomatik tamamlama yok.
@@ -333,7 +336,9 @@ window.Semtim = window.Semtim || {};
    */
   async function tara(lat, lng, r, { ilerleme, sinyal, yenile = false, bilgi } = {}) {
     r = Math.max(200, Math.min(EN_FAZLA_YARICAP, Math.round(r)));
-    const anahtarYap = (yr) => `${SURUM}:${lat.toFixed(3)},${lng.toFixed(3)},${yr}`;
+    // Anahtar ~11 m hassasiyetinde. Daha kaba yuvarlama, 100 m ötedeki bir taramanın sonucunu
+    // bu noktaya ait sanıp dairenin kenarında veri boşluğu bırakıyordu.
+    const anahtarYap = (yr) => `${SURUM}:${lat.toFixed(4)},${lng.toFixed(4)},${yr}`;
     const anahtar = anahtarYap(r);
     const eski = await onbellekAl(anahtar);
     const taze = (k) => k && Date.now() - k.zaman < ONBELLEK_GUN * 864e5;

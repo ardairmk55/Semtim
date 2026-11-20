@@ -54,3 +54,17 @@ test("seviye ve kalıcı depo", () => {
   k.temizle();
   assert.equal(depo.getItem(ANAHTAR), null);
 });
+
+test("yenidenOku: depodaki güncel sonucu alır, bozuk veride eldekini korur", () => {
+  const depo = sahteDepo();
+  const k = olustur(depo);
+  k.iceAktar(ORNEK);
+  assert.equal(k.sayi(), 2);
+  depo.ham.set(ANAHTAR, JSON.stringify({ "node/1": { skor: 10 } }));
+  k.yenidenOku();
+  assert.equal(k.sayi(), 1);
+  assert.equal(k.al("node/1").skor, 10);
+  depo.ham.set(ANAHTAR, "{bozuk");
+  k.yenidenOku();
+  assert.equal(k.sayi(), 1);
+});

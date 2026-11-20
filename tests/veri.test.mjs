@@ -126,3 +126,25 @@ test("Overpass sorgusu kutu (bbox), düşük süre ve qt kullanır", () => {
   assert.match(q, /out center tags qt;$/);
   assert.doesNotMatch(q, /around/);
 });
+
+test("önbellek anahtarı ~11 m hassasiyetinde (110 m ötedeki tarama bu noktaya sayılmaz)", async () => {
+  const cagri = [];
+  const fetch = async () => { cagri.push(1); return { ok: true, status: 200, json: async () => ({ elements: [] }) }; };
+  const V = yukleOrtamla({ fetch, indexedDB: undefined }, "turkce.js", "sektor.js", "veri.js");
+  await V.veri.tara(41.0000, 29.0000, 1000);
+  await V.veri.tara(41.0000, 29.0000, 1000); // aynı nokta: önbellekten
+  assert.equal(cagri.length, 1);
+  await V.veri.tara(41.0009, 29.0000, 1000); // ~100 m kuzey: yeni tarama olmalı
+  assert.equal(cagri.length, 2);
+});
+
+test("bekle(): zaman dolunca iptal dinleyicisi bırakılmaz", async () => {
+  const V = yukleOrtamla({ fetch: async () => ({ ok: true, status: 200, json: async () => ({ elements: [] }) }) }, "turkce.js", "sektor.js", "veri.js");
+  const k = new AbortController();
+  let n = 0;
+  const asil = k.signal.addEventListener.bind(k.signal);
+  k.signal.addEventListener = (...a) => { n++; return asil(...a); };
+  // 5 km → 4 parça → aralarda 3 kez bekle(400, sinyal)
+  await V.veri.tara(41.5, 29.5, 5000, { sinyal: k.signal });
+  assert.ok(n <= 8, `dinleyici sayısı beklenenden fazla: ${n}`);
+});

@@ -33,6 +33,8 @@ Seçilen noktanın 5 km çevresindeki işletmeleri OpenStreetMap'ten anlık çek
 - Overpass (yedek sunuculu), Nominatim (saniyede 1 istek, otomatik tamamlama yok), OSM karoları; atıf görünür kalmalı.
 - Önbellek IndexedDB'de 7 gün; notlar/huni localStorage'da.
 - Yeni: "şu an açık mı" (opening_hours), satış hunisi (aşama, not, takip tarihi, JSON yedek), PWA + açık/koyu tema.
+- Haritayı kaydırınca "Bu alanda tara"; site sağlık kontrolü CSV'sinin içe aktarımı; yeni sürüm bildirimi.
+- Azami tarama yarıçapı 5 km (ücretsiz Overpass sunucularını yormamak için).
 - "Kayıtlı sitesi yok" OSM verisine dayanır; gerçeği garanti etmez. Bu dürüstlük korunmalı.
 
 ## Brand Commitments

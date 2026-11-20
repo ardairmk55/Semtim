@@ -98,9 +98,18 @@ window.Semtim = window.Semtim || {};
       if (ham && typeof ham === "object") veri = ham;
     } catch (e) { veri = {}; }
     const kaydet = () => { try { depo.setItem(ANAHTAR, JSON.stringify(veri)); } catch (e) { /* kota dolu */ } };
+    /** Depodaki güncel hâli belleğe alır (başka sekme değiştirdiğinde); yazma yapmaz. */
+    const yenidenOku = () => {
+      try {
+        const ham = JSON.parse(depo.getItem(ANAHTAR) || "{}");
+        veri = ham && typeof ham === "object" ? ham : {};
+      } catch (e) { /* bozuk veri: eldeki hâli koru */ }
+      return veri;
+    };
     return {
       al: (id) => veri[id] || null,
       sayi: () => Object.keys(veri).length,
+      yenidenOku,
       /** CSV metnini alır, mevcut sonuçlarla birleştirir (aynı işletmede yeni sonuç kazanır). */
       iceAktar(metin) {
         const sonuc = ayristir(metin);

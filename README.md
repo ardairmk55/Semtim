@@ -46,6 +46,8 @@ Her işletmenin açık/kapalı durumu, çalışma saatleri, telefonu, sosyal med
 
 - “Şu an açık” filtresi (OSM `opening_hours` ayrıştırıcı)
 - Sektör çipleri, zincir gizleme, metin arama
+- Haritayı kaydırınca **“Bu alanda tara”**: yeni noktayı seçmeden tarama
+- Fırsat puanı için görsel ölçek ve öncelik etiketi
 - CSV dışa aktarma ve yazdırılabilir ziyaret listesi
 
 </td>
@@ -70,6 +72,7 @@ Aday → İletişime geçildi → Teklif verildi → Müşteri / İlgilenmedi.
 - Kartları **fareyle ya da parmakla** sürükle-bırak (telefonda basılı tut)
 - Klavyeyle taşı (`←` `→`), her taşımada **Geri al**
 - Takip tarihi geçen kayıtlar kırmızı, üst barda sayaç
+- Aşama dağılımı çubuğu ve kolon yüzdeleriyle dönüşüm özeti
 - JSON yedek / geri yükleme ve CSV
 
 <sub>Görseldeki işletme adları örnektir.</sub>
@@ -120,6 +123,7 @@ Ana ekrana eklenebilir (PWA) ve son taramalar **çevrimdışı** da açılır.
 | `T` | Bu çevreyi tara | `P` | Ziyaret listesini yazdır |
 | `1` `2` `3` | Keşfet · Fırsatlar · Huni | `Esc` | Ayrıntıyı kapat |
 | `J` `K` | Sonraki / önceki işletme | `?` | Kısayol listesi |
+| `↑` `↓` | Listede gez (`Home` / `End` uçlara) | `←` `→` | Huni kartını aşamalar arasında taşı |
 
 ## Hızlı başlangıç
 
@@ -180,6 +184,9 @@ flowchart LR
 | Adres arama | Nominatim: saniyede en fazla 1 istek, otomatik tamamlama yok, sonuçlar 30 gün önbellekte. |
 | “Şu an açık mı?” | [`js/saatler.js`](js/saatler.js) OSM `opening_hours` biçiminin yaygın alt kümesini okur (gün aralıkları, öğle arası, gece yarısını aşan saatler, `24/7`, `off`). Emin olamadığı ifadede tahmin yürütmez. |
 | İkonlar | [Lucide](https://lucide.dev) (ISC). Kullanılan ikonlar tek bir SVG sprite'ta; emoji kullanılmaz. |
+| Güncelleme | Yeni sürüm yayınlandığında açık sayfada “yeni sürüm hazır” bandı çıkar; uygulama sessizce eskimez. |
+| Erişilebilirlik | Lighthouse erişilebilirlik 100. Listede dolaşan odak (roving tabindex): sekme tuşu listeyi atlar, ok tuşları gezer. |
+| Çok sekme | Huni ya da site sonuçları başka sekmede değişirse sayfa yeniden yüklenmeden tazelenir; süren tarama bölünmez. |
 
 <details>
 <summary><b>Klasör yapısı</b></summary>
